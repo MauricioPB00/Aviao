@@ -1,0 +1,120 @@
+
+// nao finalizado ( falta ajustes na linha 90)
+
+// Definir os compartimentos e suas capacidades
+const compartments = [
+    { name: 'dianteiro', capacity: { weight: 10000, volume: 6800 } },
+    { name: 'central', capacity: { weight: 16000, volume: 8700 } },
+    { name: 'traseiro', capacity: { weight: 8000, volume: 5300 } }
+  ];
+  
+  // Definir a carga a ser distribuída
+  const cargo = [
+    { name: 'C1', weight: 18000, volume: 480, value: 310 },
+    { name: 'C2', weight: 15000, volume: 650, value: 480 },
+    { name: 'C3', weight: 23000, volume: 580, value: 350 },
+    { name: 'C4', weight: 12000, volume: 390, value: 285 }
+  ];
+  
+  // Definir a função de fitness que avalia uma solução
+  function fitnessFunction(solution) {
+    // Calcular o peso total e o valor total da carga em cada compartimento
+    const compartmentWeights = compartments.map(() => 0);
+    const compartmentValues = compartments.map(() => 0);
+    if (solution) {
+        solution.forEach((cargoIndex, compartmentIndex) => {
+          const cargoItem = cargo[cargoIndex];
+          const compartment = compartments[compartmentIndex];
+          compartmentWeights[compartmentIndex] += cargoItem.weight;
+          compartmentValues[compartmentIndex] += cargoItem.value;
+        });
+      }
+  
+    // Calcular o desvio da proporção de peso em relação à capacidade
+    const weightRatios = compartmentWeights.map((weight, i) => compartments[i] && weight / compartments[i].capacity.weight || 0);
+    const weightRatioDeviation = Math.max(...weightRatios) - Math.min(...weightRatios);
+  
+    // Calcular o desvio da proporção de volume em relação à capacidade
+    const volumeRatios = compartmentWeights.map((weight, i) => compartmentWeights[i] && compartments[i] && cargo[solution[i]] ? weight * cargo[solution[i]].volume / compartments[i].capacity.volume : 0);
+    const volumeRatioDeviation = Math.max(...volumeRatios) - Math.min(...volumeRatios);
+  
+    // Calcular o valor total da carga
+    const totalValue = compartmentValues.reduce((acc, value) => acc + value);
+  
+    // Retornar a pontuação de fitness
+    return totalValue - weightRatioDeviation - volumeRatioDeviation;
+  }
+  
+  // Definir os parâmetros do algoritmo genético
+  const populationSize = 100;
+  const mutationRate = 0.01;
+  const elitismRate = 0.1;
+  const generations = 1000;
+  
+  // Inicializar a população aleatoriamente
+  let population = Array.from({ length: populationSize }, () => {
+    return Array.from({ length: cargo.length }, () => Math.floor(Math.random() * compartments.length));
+  });
+  
+  // Executar o algoritmo genético
+  for (let i = 0; i < generations; i++) {
+    // Avaliar a pontuação de fitness de cada solução
+    const fitnessScores = population.map(fitnessFunction);
+    
+    // Selecionar as melhores soluções para a próxima geração
+    const elitismCount = Math.round(elitismRate * populationSize);
+    const eliteIndices = [...Array(elitismCount)].map(() => fitnessScores.indexOf(Math.max(...fitnessScores)));
+    const elites = eliteIndices.map(index => population[index]);
+    
+    // Gerar novas soluções por crossover e mutação
+    const crossoverCount = populationSize - elitismCount;
+    const offspring = Array.from({ length: crossoverCount }, () => {
+    // Selecionar dois pais aleatórios da população
+    const parentIndices = [...Array(2)].map(() => Math.floor(Math.random() * (populationSize - elitismCount)));
+    const parents = parentIndices.map(index => population[index]);
+    // Realizar crossover uniforme para gerar o filho
+    const child = Array.from({ length: cargo.length }, (_, i) => {
+  
+ 
+        const gene = Math.random() < 0.5 ? (parents[0] ? parents[0][i] : null) : (parents[1] ? parents[1][i] : null);
+          
+         
+        return gene;
+        });
+      
+      const getGene = (cargoIndex) => {
+        const index = child.indexOf(cargoIndex);
+        if (index < 0 || index >= parents[0].length || index >= parents[1].length) {
+          return null;
+        }
+        return Math.random() < 0.5 ? parents[0][index] : parents[1][index];
+      };
+      
+      const cargoIndex = 0; // Definir a variável cargoIndex com um valor inteiro qualquer
+      const gene = Math.random() < 0.5 && parents[0][i] ? parents[0][i] : parents[1][i];
+  
+  // Realizar mutação aleatória
+  child.forEach((gene, i) => {
+    if (Math.random() < mutationRate) {
+      child[i] = Math.floor(Math.random() * compartments.length);
+    }
+  });
+  
+  return child;
+  });
+  
+  // Combinar as elites e os descendentes para formar a próxima geração
+  population = [...elites, ...offspring];
+  }
+  
+  // Selecionar a melhor solução encontrada
+  const bestSolutionIndex = fitnessScores.indexOf(Math.max(...fitnessScores));
+  const bestSolution = population[bestSolutionIndex];
+  
+// Imprimir a distribuição de carga
+console.log('Distribuição de carga:');
+bestSolution.forEach((cargoIndex, compartmentIndex) => {
+  const cargoItem = cargo[cargoIndex];
+  const compartment = compartments[compartmentIndex];
+  console.log(`${cargoItem.name}: ${compartment.name}`);
+});
